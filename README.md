@@ -1,59 +1,212 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+﻿# PHP Home NAS API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+以 Laravel 12 與 Laravel Sanctum 建立的個人檔案儲存 API。此專案只負責後端 API，
+前端應由獨立專案維護。API 使用版本化路徑，目前版本為 `2026-09`。
 
-## About Laravel
+## 快速開始
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 環境需求
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.2 或以上
+- Composer
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 安裝與啟動
 
-## Learning Laravel
+```bash
+composer run setup
+php artisan serve
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+預設服務位置為 `http://127.0.0.1:8000`。API Base URL：
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```text
+http://127.0.0.1:8000/api/2026-09
+```
 
-## Laravel Sponsors
+若只需要安裝 PHP 依賴，也可以執行：
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+composer install
+php artisan migrate
+```
 
-### Premium Partners
+本後端不包含前端原始碼、Node.js、npm、Vite 或 Tailwind。若需要部署由前端專案
+建置出的靜態檔案，可將產出檔放在 `public/`；前端開發與建置應在獨立的前端專案完成。
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## API 共通規則
 
-## Contributing
+- JSON 請求與 JSON 回應使用 `Content-Type: application/json`；檔案上傳使用 `multipart/form-data`。
+- 需要登入的端點使用 `Authorization: Bearer <access_token>`。
+- `access_token` 有效期限為 1 小時，`refresh_token` 有效期限為 30 天。
+- 檔案上傳使用 `multipart/form-data`，欄位名稱為 `file`。
+- `message` 在 `APP_DEBUG=false` 時會是 `null`；驗證錯誤明細也只在 debug 模式提供。
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+成功回應格式：
 
-## Code of Conduct
+```json
+{
+    "code": "LOGIN_SUCCESS",
+    "data": {},
+    "message": null,
+    "nextPageCursor": ""
+}
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 認證 API
 
-## Security Vulnerabilities
+### 註冊
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+`POST /register`
 
-## License
+請求 Body：
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```json
+{
+    "account": "demo@example.com",
+    "username": "Demo User",
+    "password": "password",
+    "password_confirmation": "password"
+}
+```
+
+回應 `200`：`code` 為 `REGISTER_SUCCESS`，`data` 內含 `user` 與 `tokens`。
+
+### 登入
+
+`POST /login`
+
+請求 Body：
+
+```json
+{
+    "account": "demo@example.com",
+    "password": "password"
+}
+```
+
+回應 `200`：`code` 為 `LOGIN_SUCCESS`，`data` 內含 `user` 與 `tokens`。
+
+### 更新 Access Token
+
+`POST /refresh`
+
+請求 Body：
+
+```json
+{
+    "refresh_token": "<refresh_token>"
+}
+```
+
+成功回應 `200` 的 `code` 為 `TOKEN_REFRESHED`。Refresh token 使用後會失效，
+請使用回應中的新 token 組合取代舊值。
+
+Token 回應格式：
+
+```json
+{
+    "token_type": "Bearer",
+    "access_token": "<access_token>",
+    "refresh_token": "<refresh_token>",
+    "expires_at": "2026-09-13T12:00:00.000000Z"
+}
+```
+
+## 檔案 API
+
+以下端點都需要 `Authorization: Bearer <access_token>`。
+
+### 上傳檔案
+
+`POST /files`
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/2026-09/files \
+	-H "Authorization: Bearer <access_token>" \
+	-F "file=@/path/to/example.pdf"
+```
+
+請求欄位：`file`（必填，檔案）。成功回應 `200` 的 `code` 為 `FILE_UPLOADED`。
+
+檔案資料格式：
+
+```json
+{
+    "id": 1,
+    "name": "example.pdf",
+    "created_at": "2026-09-13T12:00:00.000000Z",
+    "updated_at": "2026-09-13T12:00:00.000000Z"
+}
+```
+
+### 檢視檔案
+
+`GET /files/{file}`
+
+回傳檔案內容，並依檔案 MIME type 設定 `Content-Type`。
+
+```bash
+curl http://127.0.0.1:8000/api/2026-09/files/1 \
+	-H "Authorization: Bearer <access_token>" \
+	--output example.pdf
+```
+
+### 下載檔案
+
+`GET /files/{file}/download`
+
+回傳檔案下載回應，檔名使用上傳時的檔名。
+
+```bash
+curl http://127.0.0.1:8000/api/2026-09/files/1/download \
+	-H "Authorization: Bearer <access_token>" \
+	--output example.pdf
+```
+
+### 刪除檔案
+
+`DELETE /files/{file}`
+
+```bash
+curl -X DELETE http://127.0.0.1:8000/api/2026-09/files/1 \
+	-H "Authorization: Bearer <access_token>"
+```
+
+成功回應 `200` 的 `code` 為 `FILE_DELETED`，`data` 為空陣列。
+
+## 錯誤回應
+
+錯誤回應都使用相同結構：
+
+```json
+{
+    "code": "VALIDATION_FAILED",
+    "data": null,
+    "message": null,
+    "nextPageCursor": ""
+}
+```
+
+常見 HTTP 狀態與 `code`：
+
+| HTTP 狀態 | code                      | 說明                       |
+| --------- | ------------------------- | -------------------------- |
+| `401`     | `AUTHENTICATION_REQUIRED` | 缺少或無效的 Bearer token  |
+| `401`     | `INVALID_CREDENTIALS`     | 帳號或密碼錯誤             |
+| `401`     | `INVALID_REFRESH_TOKEN`   | Refresh token 無效或已過期 |
+| `404`     | `RESOURCE_NOT_FOUND`      | 找不到指定檔案             |
+| `422`     | `VALIDATION_FAILED`       | 請求欄位驗證失敗           |
+| `500`     | `INTERNAL_ERROR`          | 伺服器內部錯誤             |
+
+## 開發指令
+
+```bash
+# 執行測試
+composer test
+
+# 查看 API 路由
+php artisan route:list --path=api
+
+# 啟動 API 開發伺服器
+composer run dev
+```

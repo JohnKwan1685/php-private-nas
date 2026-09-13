@@ -2,36 +2,30 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ApiCode;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\FileUploadRequest;
 use App\Http\Resources\FileResource;
 use App\Http\Responses\ApiResponse;
-use App\Models\File as FileModel;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Models\File as FileModel;
 
 class FileController extends Controller
 {
-  public function upload(Request $request): JsonResponse
+  public function upload(FileUploadRequest $request): JsonResponse
   {
-    $request->validate([
-      'file' => ['required', 'file'],
-    ]);
-
     $uploadedFile = $request->file('file');
     $path = $uploadedFile->store('files', 'local');
 
-    $file = FileModel::create([
-      'name' => $uploadedFile->getClientOriginalName(),
-      'path' => $path,
-      'mime_type' => $uploadedFile->getMimeType(),
-      'size' => $uploadedFile->getSize(),
-      'user_id' => 1,
-    ]);
+    $userId = Auth::id();
+    abort_unless($userId !== null, 401);
+
+    $file = FileModel::createFromUpload($uploadedFile, $path, $userId);
 
     return ApiResponse::success(
-      'FILE_UPLOADED',
-      'File uploaded successfully.',
+      ApiCode::FILE_UPLOADED->value,
       FileResource::make($file)->resolve($request),
     );
   }
@@ -64,10 +58,8 @@ class FileController extends Controller
     $file->delete();
 
     return ApiResponse::success(
-      'FILE_DELETED',
-      'File deleted successfully.',
+      ApiCode::FILE_DELETED->value,
       [],
     );
   }
 }
-

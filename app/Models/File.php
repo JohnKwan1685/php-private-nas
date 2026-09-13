@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon as Date;
 
 /**
@@ -17,6 +18,20 @@ use Illuminate\Support\Carbon as Date;
  */
 class File extends Model
 {
+  public static function createFromUpload(
+    UploadedFile $uploadedFile,
+    string $path,
+    int $userId,
+  ): static {
+    return static::create([
+      'name' => $uploadedFile->getClientOriginalName(),
+      'path' => $path,
+      'mime_type' => $uploadedFile->getMimeType(),
+      'size' => $uploadedFile->getSize(),
+      'user_id' => $userId,
+    ]);
+  }
+
   protected $fillable = [
     'name',
     'path',

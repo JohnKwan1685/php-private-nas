@@ -8,8 +8,8 @@ final class ApiResponse
 {
   public static function success(
     string $code,
-    string $message,
     mixed $data = null,
+    ?string $message = null,
     string $nextPageCursor = '',
   ): JsonResponse {
     return self::make($code, $message, $data, $nextPageCursor);
@@ -27,16 +27,22 @@ final class ApiResponse
 
   private static function make(
     string $code,
-    string $message,
+    ?string $message,
     mixed $data,
     string $nextPageCursor,
     int $status = 200,
   ): JsonResponse {
-    return response()->json([
+    $response = [
       'code' => $code,
-      'message' => $message,
       'data' => $data,
+      'message' => null,
       'nextPageCursor' => $nextPageCursor,
-    ], $status);
+    ];
+
+    if ($message !== null && config('app.debug')) {
+      $response['message'] = $message;
+    }
+
+    return response()->json($response, $status);
   }
 }
